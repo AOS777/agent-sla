@@ -6,6 +6,7 @@ const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://agent-sla-aos.aos777aos.chatgpt.site'),
   title: 'AgentSLA — Consensus-ready proof for autonomous work',
   description: 'Bundle agent logs and deliverables into tamper-evident evidence for GenLayer SLA adjudication.',
   openGraph: {
