@@ -22,7 +22,9 @@ The local pre-flight result is deliberately labeled as non-final. Only the Intel
 - Deterministic completeness checks
 - Canonical SHA-256 case hash
 - Downloadable `agentsla/evidence-pack@1` JSON packet
-- GenLayer Intelligent Contract for case submission and validator consensus
+- Live GenLayerJS connection to Studio Dev chain `61997`
+- Onchain case submission, consensus adjudication, and result reads
+- GenLayer Intelligent Contract for case storage and validator consensus
 - Direct-mode contract tests and dependency-free web logic tests
 
 ## Architecture
@@ -36,7 +38,7 @@ AgentSLA web app
     │  canonicalize → pre-flight → SHA-256 evidence pack
     ▼
 AgentSLAJudge Intelligent Contract
-    │  strict_eq over validator LLM verdicts (+ optional public web evidence)
+    │  prompt_comparative over validator LLM verdicts (+ optional public web evidence)
     ▼
 PASS / FAIL / NEEDS_REVIEW + score + reason
 ```
@@ -75,11 +77,17 @@ genvm-lint check contracts/agent_sla_judge.py
 2. Call `adjudicate(case_id)`.
 3. Read `get_case(case_id)` to obtain the consensus outcome, score, and reason.
 
-The optional public evidence URL is rendered inside GenVM. Validators receive the same terms, signed evidence bundle, and public context. `strict_eq` makes the result commit only when validators agree on the canonical JSON verdict.
+The optional public evidence URL is rendered inside GenVM. Validators receive the same terms, signed evidence bundle, and public context. `prompt_comparative` independently compares validator conclusions and requires the outcome to match exactly.
+
+## Verified deployment
+
+- Network: Studio Dev (`chain 61997`)
+- Contract: [`0xCF0b99C906F0Ec63317721094A84996CEBaf4724`](https://explorer-studio-dev.genlayer.com/address/0xCF0b99C906F0Ec63317721094A84996CEBaf4724)
+- Deploy transaction: [`0xd02f3a6ccaa24decff9c0626a9aa19444be1c49a6e0ec2aa7232cd62d86c1490`](https://explorer-studio-dev.genlayer.com/tx/0xd02f3a6ccaa24decff9c0626a9aa19444be1c49a6e0ec2aa7232cd62d86c1490)
 
 ## Scope and next step
 
-This MVP adjudicates fulfillment but does not custody funds. It is designed to sit in front of an escrow or x402 payment adapter, which can release or dispute funds based on the stored consensus verdict. No contract address is claimed until a deployment has been completed and verified.
+This MVP adjudicates fulfillment but does not custody funds. It is designed to sit in front of an escrow or x402 payment adapter, which can release or dispute funds based on the stored consensus verdict.
 
 ## License
 

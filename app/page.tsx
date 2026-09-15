@@ -1,6 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createAccount, createClient, isSuccessful } from 'genlayer-js';
+import { studioDevnet } from 'genlayer-js/chains';
+import { TransactionHashVariant } from 'genlayer-js/types';
 
 import {
   analyzeEvidence,
@@ -32,11 +35,29 @@ const sampleEvidence = JSON.stringify(
   2,
 );
 
+const contractAddress = '0xCF0b99C906F0Ec63317721094A84996CEBaf4724' as const;
+const explorerAddressUrl = `https://explorer-studio-dev.genlayer.com/address/${contractAddress}`;
+const explorerTxBase = 'https://explorer-studio-dev.genlayer.com/tx/';
+const readClient = createClient({ chain: studioDevnet });
+
 type Verdict = {
   label: 'CONSENSUS READY' | 'NEEDS EVIDENCE';
   score: number;
   hash: string;
   checks: { label: string; pass: boolean }[];
+};
+
+type ChainCase = {
+  case_id: string;
+  owner: string;
+  status: string;
+  score: string;
+  reason: string;
+};
+
+type ContractHealth = {
+  state: 'CHECKING' | 'LIVE' | 'UNREACHABLE';
+  detail: string;
 };
 
 export default function Home() {
@@ -46,6 +67,34 @@ export default function Home() {
   const [packet, setPacket] = useState<Record<string, unknown> | null>(null);
   const [error, setError] = useState('');
   const [running, setRunning] = useState(false);
+  const [publicEvidenceUrl, setPublicEvidenceUrl] = useState('');
+  const [contractHealth, setContractHealth] = useState<ContractHealth>({
+    state: 'CHECKING',
+    detail: 'Reading contract schema from Studio Dev…',
+  });
+  const [chainBusy, setChainBusy] = useState<'SUBMIT' | 'ADJUDICATE' | null>(null);
+  const [chainError, setChainError] = useState('');
+  const [chainCase, setChainCase] = useState<ChainCase | null>(null);
+  const [chainTx, setChainTx] = useState('');
+
+  useEffect(() => {
+    let active = true;
+
+    readClient.getContractSchema(contractAddress)
+      .then((schema) => {
+        if (!active) return;
+        const methods = Object.keys(schema.methods);
+        const ready = ['submit_case', 'adjudicate', 'get_case'].every((name) => methods.includes(name));
+        setContractHealth(ready
+          ? { state: 'LIVE', detail: 'Chain 61997 · 3 contract methods verified' }
+          : { state: 'UNREACHABLE', detail: 'Contract schema did not match the AgentSLA interface.' });
+      })
+      .catch(() => {
+        if (active) setContractHealth({ state: 'UNREACHABLE', detail: 'Studio Dev RPC is temporarily unavailable.' });
+      });
+
+    return () => { active = false; };
+  }, []);
 
   async function runPreflight() {
     setRunning(true);
@@ -80,6 +129,68 @@ export default function Home() {
     link.download = `agentsla-${String(packet.caseHash).slice(0, 12)}.json`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function readChainCase(caseId: string) {
+    const value = await readClient.readContract({
+      address: contractAddress,
+      functionName: 'get_case',
+      args: [caseId],
+      transactionHashVariant: TransactionHashVariant.LATEST_NONFINAL,
+    });
+    const record = value as Record<string, unknown>;
+    setChainCase({
+      case_id: String(record.case_id ?? caseId),
+      owner: String(record.owner ?? ''),
+      status: String(record.status ?? ''),
+      score: String(record.score ?? '0'),
+      reason: String(record.reason ?? ''),
+    });
+  }
+
+  async function submitToGenLayer() {
+    if (!packet || !verdict || verdict.label !== 'CONSENSUS READY') return;
+    setChainBusy('SUBMIT');
+    setChainError('');
+    try {
+      const caseId = `sla-${verdict.hash.slice(0, 24)}`;
+      const writer = createClient({ chain: studioDevnet, account: createAccount() });
+      const txId = await writer.writeContract({
+        address: contractAddress,
+        functionName: 'submit_case',
+        args: [caseId, terms, JSON.stringify(packet), publicEvidenceUrl.trim()],
+      });
+      const receipt = await writer.waitForDecision({ hash: txId, interval: 1000, retries: 120 });
+      if (!isSuccessful(receipt)) throw new Error('The network did not accept the case.');
+      setChainTx(String(txId));
+      await readChainCase(caseId);
+    } catch (caught) {
+      setChainError(caught instanceof Error ? caught.message : 'Could not submit the case to GenLayer.');
+    } finally {
+      setChainBusy(null);
+    }
+  }
+
+  async function adjudicateOnGenLayer() {
+    if (!chainCase?.case_id || chainCase.status !== 'PENDING') return;
+    setChainBusy('ADJUDICATE');
+    setChainError('');
+    try {
+      const writer = createClient({ chain: studioDevnet, account: createAccount() });
+      const txId = await writer.writeContract({
+        address: contractAddress,
+        functionName: 'adjudicate',
+        args: [chainCase.case_id],
+      });
+      const receipt = await writer.waitForDecision({ hash: txId, interval: 1000, retries: 180 });
+      if (!isSuccessful(receipt)) throw new Error('Consensus did not accept the adjudication.');
+      setChainTx(String(txId));
+      await readChainCase(chainCase.case_id);
+    } catch (caught) {
+      setChainError(caught instanceof Error ? caught.message : 'Could not run GenLayer adjudication.');
+    } finally {
+      setChainBusy(null);
+    }
   }
 
   return (
@@ -136,6 +247,14 @@ export default function Home() {
             <label htmlFor="evidence"><span>02</span> Evidence bundle</label>
             <p>Paste logs, hashes and delivery receipts as JSON.</p>
             <textarea className="code-input" id="evidence" value={evidence} onChange={(event) => setEvidence(event.target.value)} spellCheck={false} />
+            <label className="url-label" htmlFor="public-evidence">Optional public evidence URL</label>
+            <input
+              id="public-evidence"
+              type="url"
+              value={publicEvidenceUrl}
+              onChange={(event) => setPublicEvidenceUrl(event.target.value)}
+              placeholder="https://example.com/public-proof"
+            />
             <div className="input-foot"><span>JSON</span><strong>Canonicalized before hashing</strong></div>
           </section>
 
@@ -165,6 +284,25 @@ export default function Home() {
               <span>{running ? 'CHECKING…' : 'RUN EVIDENCE CHECK'}</span><b>→</b>
             </button>
             {packet && <button className="download-button" type="button" onClick={downloadPacket}>DOWNLOAD EVIDENCE PACK ↓</button>}
+            {packet && verdict?.label === 'CONSENSUS READY' && !chainCase && (
+              <button className="chain-button" type="button" onClick={submitToGenLayer} disabled={chainBusy !== null || contractHealth.state !== 'LIVE'}>
+                {chainBusy === 'SUBMIT' ? 'WAITING FOR CONSENSUS…' : 'SUBMIT CASE ONCHAIN ↗'}
+              </button>
+            )}
+            {chainCase?.status === 'PENDING' && (
+              <button className="chain-button" type="button" onClick={adjudicateOnGenLayer} disabled={chainBusy !== null}>
+                {chainBusy === 'ADJUDICATE' ? 'VALIDATORS ARE JUDGING…' : 'RUN CONSENSUS ADJUDICATION ↗'}
+              </button>
+            )}
+            {chainCase && (
+              <div className="chain-result">
+                <span>ONCHAIN CASE · {chainCase.status}</span>
+                <strong>{chainCase.score}/100</strong>
+                <p>{chainCase.reason}</p>
+              </div>
+            )}
+            {chainTx && <a className="tx-link" href={`${explorerTxBase}${chainTx}`} target="_blank" rel="noreferrer">VIEW LATEST TRANSACTION ↗</a>}
+            {chainError && <p className="error" role="alert">{chainError}</p>}
             <small>Local result ≠ final verdict. GenLayer consensus is the adjudication layer.</small>
           </section>
         </div>
@@ -182,20 +320,27 @@ export default function Home() {
           <div className="verdict-types">
             <span>PASS</span><span>FAIL</span><span>NEEDS_REVIEW</span>
           </div>
+          <a className="deployment-card" href={explorerAddressUrl} target="_blank" rel="noreferrer">
+            <span className={`deployment-state ${contractHealth.state.toLowerCase()}`}>{contractHealth.state}</span>
+            <div><small>STUDIO DEV · CHAIN 61997</small><strong>{contractAddress}</strong><p>{contractHealth.detail}</p></div>
+            <b>↗</b>
+          </a>
         </div>
         <div className="contract-code" aria-label="Intelligent Contract excerpt">
           <div><span>AGENT_SLA_JUDGE.PY</span><b>GENVM / PYTHON</b></div>
-          <pre><code>{`def judge_case() -> str:
-    public_context = gl.nondet.web.render(
-        case.public_evidence_url, mode="text"
+          <pre><code>{`def judge_case() -> dict:
+    context = gl.nondet.web.render(
+        public_evidence_url, mode="text"
     )
-    verdict = gl.nondet.exec_prompt(
-        rubric + evidence + public_context,
+    return gl.nondet.exec_prompt(
+        rubric + evidence + context,
         response_format="json",
     )
-    return json.dumps(verdict, sort_keys=True)
 
-result = gl.eq_principle.strict_eq(judge_case)`}</code></pre>
+result = gl.eq_principle.prompt_comparative(
+    judge_case,
+    principle="Outcome must match exactly",
+)`}</code></pre>
           <p><span>●</span> Evidence is data, never instruction.</p>
         </div>
       </section>
