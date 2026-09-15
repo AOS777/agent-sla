@@ -154,12 +154,16 @@ export default function Home() {
     setChainError('');
     try {
       const caseId = `sla-${verdict.hash.slice(0, 24)}`;
-      const writer = createClient({ chain: studioDevnet, account: createAccount() });
-      const txId = await writer.writeContract({
+      const account = createAccount();
+      const writer = createClient({ chain: studioDevnet, account });
+      const writeRequest = {
+        account,
         address: contractAddress,
         functionName: 'submit_case',
         args: [caseId, terms, JSON.stringify(packet), publicEvidenceUrl.trim()],
-      });
+      };
+      const fees = await writer.estimateTransactionFeesForWrite(writeRequest);
+      const txId = await writer.writeContract({ ...writeRequest, fees });
       const receipt = await writer.waitForDecision({ hash: txId, interval: 1000, retries: 120 });
       if (!isSuccessful(receipt)) throw new Error('The network did not accept the case.');
       setChainTx(String(txId));
@@ -176,12 +180,16 @@ export default function Home() {
     setChainBusy('ADJUDICATE');
     setChainError('');
     try {
-      const writer = createClient({ chain: studioDevnet, account: createAccount() });
-      const txId = await writer.writeContract({
+      const account = createAccount();
+      const writer = createClient({ chain: studioDevnet, account });
+      const writeRequest = {
+        account,
         address: contractAddress,
         functionName: 'adjudicate',
         args: [chainCase.case_id],
-      });
+      };
+      const fees = await writer.estimateTransactionFeesForWrite(writeRequest);
+      const txId = await writer.writeContract({ ...writeRequest, fees });
       const receipt = await writer.waitForDecision({ hash: txId, interval: 1000, retries: 180 });
       if (!isSuccessful(receipt)) throw new Error('Consensus did not accept the adjudication.');
       setChainTx(String(txId));
