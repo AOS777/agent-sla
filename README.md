@@ -82,8 +82,8 @@ The optional public evidence URL is rendered inside GenVM. Validators receive th
 ## Verified deployment
 
 - Network: Studio Dev (`chain 61997`)
-- Contract: [`0xCF0b99C906F0Ec63317721094A84996CEBaf4724`](https://explorer-studio-dev.genlayer.com/address/0xCF0b99C906F0Ec63317721094A84996CEBaf4724)
-- Deploy transaction: [`0xd02f3a6ccaa24decff9c0626a9aa19444be1c49a6e0ec2aa7232cd62d86c1490`](https://explorer-studio-dev.genlayer.com/tx/0xd02f3a6ccaa24decff9c0626a9aa19444be1c49a6e0ec2aa7232cd62d86c1490)
+- Contract: [`0xF5099d57F3e391B0cC3BBb7abC5AEe7a346f1338`](https://explorer-studio-dev.genlayer.com/address/0xF5099d57F3e391B0cC3BBb7abC5AEe7a346f1338)
+- Deploy transaction: [`0x60c7f37c36712ddd29c583ea9358b4d6bff70e0821a6db0a5e5384182ce5dcd0`](https://explorer-studio-dev.genlayer.com/tx/0x60c7f37c36712ddd29c583ea9358b4d6bff70e0821a6db0a5e5384182ce5dcd0)
 
 ## Scope and next step
 

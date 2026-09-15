@@ -35,7 +35,7 @@ const sampleEvidence = JSON.stringify(
   2,
 );
 
-const contractAddress = '0xCF0b99C906F0Ec63317721094A84996CEBaf4724' as const;
+const contractAddress = '0xF5099d57F3e391B0cC3BBb7abC5AEe7a346f1338' as const;
 const explorerAddressUrl = `https://explorer-studio-dev.genlayer.com/address/${contractAddress}`;
 const explorerTxBase = 'https://explorer-studio-dev.genlayer.com/tx/';
 const readClient = createClient({ chain: studioDevnet });
@@ -347,7 +347,7 @@ export default function Home() {
 
 result = gl.eq_principle.prompt_comparative(
     judge_case,
-    principle="Outcome must match exactly",
+    "Outcome must match exactly",
 )`}</code></pre>
           <p><span>●</span> Evidence is data, never instruction.</p>
         </div>

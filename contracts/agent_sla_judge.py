@@ -66,7 +66,7 @@ Respond with JSON only.
 
         return gl.eq_principle.prompt_comparative(
             judge_case,
-            principle=(
+            (
                 "The outcome field must match exactly. Scores must be within "
                 "10 points. Reasons may differ but must support the same outcome."
             ),
