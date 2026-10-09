@@ -1,6 +1,6 @@
 # AgentSLA
 
-AgentSLA turns service terms, signed agent logs, and artifact receipts into a portable evidence pack that can be adjudicated by GenLayer validators.
+AgentSLA turns service terms, agent event records, and artifact receipts into a portable evidence pack that can be adjudicated by GenLayer validators.
 
 Built for the **GenLayer Agent Tank — Agentic Commerce Infrastructure** track.
 
@@ -18,7 +18,7 @@ The local pre-flight result is deliberately labeled as non-final. Only the Intel
 ## What works
 
 - Editable plain-language SLA terms
-- JSON evidence bundles with signed events, health checks, latency, and artifact hashes
+- JSON evidence bundles with event records, health checks, latency, and artifact-hash claims
 - Deterministic completeness checks
 - Canonical SHA-256 case hash
 - Downloadable `agentsla/evidence-pack@1` JSON packet
@@ -32,7 +32,7 @@ The local pre-flight result is deliberately labeled as non-final. Only the Intel
 ```text
 Agent / buyer
     │
-    ├─ SLA terms + signed logs + artifact hashes
+    ├─ SLA terms + event records + artifact-hash claims
     ▼
 AgentSLA web app
     │  canonicalize → pre-flight → SHA-256 evidence pack
@@ -54,7 +54,7 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000`, keep the included sample, and click **Run evidence check**. A complete sample returns a 100/100 `CONSENSUS READY` pre-flight result and a case hash. Edit a health-check status to `503` to see the evidence gate fail.
+Open `http://localhost:3000`, keep the included sample, and click **Run evidence check**. The sample returns a 100/100 `READY FOR REVIEW` structural pre-flight result and a case hash. This does **not** verify signatures, signer identity, artifact hashes, or SLA compliance. Edit a health-check status to `503` to see the structural gate fail. Editing the inputs invalidates the prior pre-flight result. The case hash covers the terms, evidence, and public evidence URL, but not the packet creation time or local pre-flight wording.
 
 ## Test
 
@@ -77,13 +77,16 @@ genvm-lint check contracts/agent_sla_judge.py
 2. Call `adjudicate(case_id)`.
 3. Read `get_case(case_id)` to obtain the consensus outcome, score, and reason.
 
-The optional public evidence URL is rendered inside GenVM. Validators receive the same terms, signed evidence bundle, and public context. `prompt_comparative` independently compares validator conclusions and requires the outcome to match exactly.
+The optional public evidence URL is rendered inside GenVM. Validators receive the same terms, submitted evidence bundle, and public context. `prompt_comparative` independently compares validator conclusions and requires the outcome to match exactly.
 
 ## Verified deployment
 
 - Network: Studio Dev (`chain 61997`)
 - Contract: [`0xF5099d57F3e391B0cC3BBb7abC5AEe7a346f1338`](https://explorer-studio-dev.genlayer.com/address/0xF5099d57F3e391B0cC3BBb7abC5AEe7a346f1338)
 - Deploy transaction: [`0x60c7f37c36712ddd29c583ea9358b4d6bff70e0821a6db0a5e5384182ce5dcd0`](https://explorer-studio-dev.genlayer.com/tx/0x60c7f37c36712ddd29c583ea9358b4d6bff70e0821a6db0a5e5384182ce5dcd0)
+- Live web app: [AgentSLA](https://agent-sla-aos.aos777aos.chatgpt.site/)
+- Finalized adjudication transaction: [`0xc172e5aa...e14351`](https://explorer-studio-dev.genlayer.com/tx/0xc172e5aa6c4bfd90c8a52f9f18127562de01a29528d235061538ed8fe3e14351)
+- Read-only demo case: `sla-e1aced6d0a10732462a1bcaf` (stored `NEEDS_REVIEW`, 40/100). The sample's bundle-level `signedBy` claim did not establish three individually signed events; this is a demonstration of the gap between structural checks and validator judgment, not a successful SLA fulfillment.
 
 ## Scope and next step
 

@@ -38,10 +38,12 @@ const sampleEvidence = JSON.stringify(
 const contractAddress = '0xF5099d57F3e391B0cC3BBb7abC5AEe7a346f1338' as const;
 const explorerAddressUrl = `https://explorer-studio-dev.genlayer.com/address/${contractAddress}`;
 const explorerTxBase = 'https://explorer-studio-dev.genlayer.com/tx/';
+const demoCaseId = 'sla-e1aced6d0a10732462a1bcaf';
+const demoTx = '0xc172e5aa6c4bfd90c8a52f9f18127562de01a29528d235061538ed8fe3e14351';
 const readClient = createClient({ chain: studioDevnet });
 
 type Verdict = {
-  label: 'CONSENSUS READY' | 'NEEDS EVIDENCE';
+  label: 'READY FOR REVIEW' | 'NEEDS EVIDENCE';
   score: number;
   hash: string;
   checks: { label: string; pass: boolean }[];
@@ -76,6 +78,18 @@ export default function Home() {
   const [chainError, setChainError] = useState('');
   const [chainCase, setChainCase] = useState<ChainCase | null>(null);
   const [chainTx, setChainTx] = useState('');
+  const [demoCase, setDemoCase] = useState<ChainCase | null>(null);
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [demoError, setDemoError] = useState('');
+
+  function invalidateDraft() {
+    setVerdict(null);
+    setPacket(null);
+    setError('');
+    setChainCase(null);
+    setChainTx('');
+    setChainError('');
+  }
 
   useEffect(() => {
     let active = true;
@@ -102,7 +116,7 @@ export default function Home() {
     try {
       const parsed = JSON.parse(evidence) as Record<string, unknown>;
       const assessment = analyzeEvidence(terms, parsed);
-      const evidencePacket = buildEvidencePacket(terms, parsed, assessment);
+      const evidencePacket = buildEvidencePacket(terms, parsed, assessment, publicEvidenceUrl);
       const hash = await hashEvidencePacket(evidencePacket);
       setVerdict({
         label: assessment.label,
@@ -112,7 +126,7 @@ export default function Home() {
       });
       setPacket({ ...evidencePacket, caseHash: hash });
     } catch {
-      setError('The evidence bundle is not valid JSON. Fix it and run the check again.');
+      setError('The evidence bundle must be a valid JSON object. Fix it and run the check again.');
       setVerdict(null);
       setPacket(null);
     } finally {
@@ -131,7 +145,7 @@ export default function Home() {
     URL.revokeObjectURL(url);
   }
 
-  async function readChainCase(caseId: string) {
+  async function fetchChainCase(caseId: string): Promise<ChainCase> {
     const value = await readClient.readContract({
       address: contractAddress,
       functionName: 'get_case',
@@ -139,17 +153,33 @@ export default function Home() {
       transactionHashVariant: TransactionHashVariant.LATEST_NONFINAL,
     });
     const record = value as Record<string, unknown>;
-    setChainCase({
+    return {
       case_id: String(record.case_id ?? caseId),
       owner: String(record.owner ?? ''),
       status: String(record.status ?? ''),
       score: String(record.score ?? '0'),
       reason: String(record.reason ?? ''),
-    });
+    };
+  }
+
+  async function readChainCase(caseId: string) {
+    setChainCase(await fetchChainCase(caseId));
+  }
+
+  async function readDemoCase() {
+    setDemoBusy(true);
+    setDemoError('');
+    try {
+      setDemoCase(await fetchChainCase(demoCaseId));
+    } catch {
+      setDemoError('Could not read this case from Studio Dev. The transaction is still available in the explorer.');
+    } finally {
+      setDemoBusy(false);
+    }
   }
 
   async function submitToGenLayer() {
-    if (!packet || !verdict || verdict.label !== 'CONSENSUS READY') return;
+    if (!packet || !verdict || verdict.label !== 'READY FOR REVIEW') return;
     setChainBusy('SUBMIT');
     setChainError('');
     try {
@@ -160,7 +190,7 @@ export default function Home() {
         account,
         address: contractAddress,
         functionName: 'submit_case',
-        args: [caseId, terms, JSON.stringify(packet), publicEvidenceUrl.trim()],
+        args: [caseId, String(packet.terms), JSON.stringify(packet), String(packet.publicEvidenceUrl)],
       };
       const fees = await writer.estimateTransactionFeesForWrite(writeRequest);
       const txId = await writer.writeContract({ ...writeRequest, fees });
@@ -220,7 +250,7 @@ export default function Home() {
           <p className="eyebrow"><span>01</span> Trust infrastructure for agent commerce</p>
           <h1>Prove the service.<br /><em>Release the trust.</em></h1>
           <p className="lede">
-            Turn agent logs and deliverables into a tamper-evident evidence pack,
+            Turn agent logs and deliverables into a hash-linked evidence pack,
             then let GenLayer validators adjudicate the SLA from the same public rules.
           </p>
         </div>
@@ -228,7 +258,7 @@ export default function Home() {
           <div className="signal-top"><span>PROTOCOL</span><strong>01 / 03</strong></div>
           <div className="signal-orbit" aria-hidden="true"><i /><b /><em /></div>
           <div className="signal-stats">
-            <div><span>INPUT</span><strong>Signed evidence</strong></div>
+            <div><span>INPUT</span><strong>JSON evidence</strong></div>
             <div><span>OUTPUT</span><strong>Consensus verdict</strong></div>
           </div>
         </aside>
@@ -238,7 +268,7 @@ export default function Home() {
         <div className="section-heading">
           <div>
             <p className="eyebrow"><span>02</span> Evidence workbench</p>
-            <h2 id="workbench-title">Build a consensus-ready case</h2>
+            <h2 id="workbench-title">Build a case for validator review</h2>
           </div>
           <p>This local pre-flight never sends your data anywhere.</p>
         </div>
@@ -247,20 +277,20 @@ export default function Home() {
           <section className="input-card">
             <label htmlFor="terms"><span>01</span> SLA terms</label>
             <p>Write objective rules the validators can apply.</p>
-            <textarea id="terms" value={terms} onChange={(event) => setTerms(event.target.value)} />
+            <textarea id="terms" value={terms} onChange={(event) => { setTerms(event.target.value); invalidateDraft(); }} />
             <div className="input-foot"><span>{terms.length} chars</span><strong>Plain language</strong></div>
           </section>
 
           <section className="input-card">
             <label htmlFor="evidence"><span>02</span> Evidence bundle</label>
             <p>Paste logs, hashes and delivery receipts as JSON.</p>
-            <textarea className="code-input" id="evidence" value={evidence} onChange={(event) => setEvidence(event.target.value)} spellCheck={false} />
+            <textarea className="code-input" id="evidence" value={evidence} onChange={(event) => { setEvidence(event.target.value); invalidateDraft(); }} spellCheck={false} />
             <label className="url-label" htmlFor="public-evidence">Optional public evidence URL</label>
             <input
               id="public-evidence"
               type="url"
               value={publicEvidenceUrl}
-              onChange={(event) => setPublicEvidenceUrl(event.target.value)}
+              onChange={(event) => { setPublicEvidenceUrl(event.target.value); invalidateDraft(); }}
               placeholder="https://example.com/public-proof"
             />
             <div className="input-foot"><span>JSON</span><strong>Canonicalized before hashing</strong></div>
@@ -269,18 +299,18 @@ export default function Home() {
           <section className="verdict-card" aria-live="polite">
             <div className="verdict-head">
               <span>03 / PREFLIGHT</span>
-              <span className={verdict?.label === 'CONSENSUS READY' ? 'state ready' : 'state'}>
+              <span className={verdict?.label === 'READY FOR REVIEW' ? 'state ready' : 'state'}>
                 {verdict?.label ?? 'AWAITING INPUT'}
               </span>
             </div>
             <div className="score-wrap">
               <div className="score"><strong>{verdict?.score ?? '—'}</strong><span>/100</span></div>
-              <p>{verdict ? 'Evidence completeness score' : 'Run a local check before sending the case to consensus.'}</p>
+              <p>{verdict ? 'Structural completeness score — not a validity or consensus score' : 'Run a local check before sending the case to consensus.'}</p>
             </div>
             <div className="check-list">
               {(verdict?.checks ?? [
                 { label: 'Machine-readable evidence', pass: false },
-                { label: 'Signed event trail', pass: false },
+                { label: 'Event records', pass: false },
                 { label: 'Objective decision criteria', pass: false },
               ]).map((check) => (
                 <div key={check.label}><span className={check.pass ? 'check pass' : 'check'}>{check.pass ? '✓' : '·'}</span>{check.label}</div>
@@ -292,7 +322,7 @@ export default function Home() {
               <span>{running ? 'CHECKING…' : 'RUN EVIDENCE CHECK'}</span><b>→</b>
             </button>
             {packet && <button className="download-button" type="button" onClick={downloadPacket}>DOWNLOAD EVIDENCE PACK ↓</button>}
-            {packet && verdict?.label === 'CONSENSUS READY' && !chainCase && (
+            {packet && verdict?.label === 'READY FOR REVIEW' && !chainCase && (
               <button className="chain-button" type="button" onClick={submitToGenLayer} disabled={chainBusy !== null || contractHealth.state !== 'LIVE'}>
                 {chainBusy === 'SUBMIT' ? 'WAITING FOR CONSENSUS…' : 'SUBMIT CASE ONCHAIN ↗'}
               </button>
@@ -311,7 +341,7 @@ export default function Home() {
             )}
             {chainTx && <a className="tx-link" href={`${explorerTxBase}${chainTx}`} target="_blank" rel="noreferrer">VIEW LATEST TRANSACTION ↗</a>}
             {chainError && <p className="error" role="alert">{chainError}</p>}
-            <small>Local result ≠ final verdict. GenLayer consensus is the adjudication layer.</small>
+            <small>Local checks do not verify signatures, signer identity, hashes, or claims. Only GenLayer consensus decides the SLA outcome. Onchain actions create an ephemeral account and may incur Studio Dev testnet fees.</small>
           </section>
         </div>
       </section>
@@ -333,6 +363,16 @@ export default function Home() {
             <div><small>STUDIO DEV · CHAIN 61997</small><strong>{contractAddress}</strong><p>{contractHealth.detail}</p></div>
             <b>↗</b>
           </a>
+          <div className="demo-proof">
+            <small>PUBLIC ONCHAIN DEMO · NO TRANSACTION REQUIRED</small>
+            <p>Our sample packet passes local structure checks, but validators marked it NEEDS_REVIEW (40/100): a bundle-level signer claim does not prove three individually signed events.</p>
+            <button type="button" onClick={readDemoCase} disabled={demoBusy || contractHealth.state !== 'LIVE'}>
+              {demoBusy ? 'READING STUDIO DEV…' : 'READ THE STORED VERDICT ↗'}
+            </button>
+            {demoCase && <div className="demo-result"><strong>{demoCase.status} · {demoCase.score}/100</strong><p>{demoCase.reason}</p><code>{demoCase.case_id}</code></div>}
+            {demoError && <p className="error" role="alert">{demoError}</p>}
+            <a href={`${explorerTxBase}${demoTx}`} target="_blank" rel="noreferrer">VIEW FINALIZED ADJUDICATION TX ↗</a>
+          </div>
         </div>
         <div className="contract-code" aria-label="Intelligent Contract excerpt">
           <div><span>AGENT_SLA_JUDGE.PY</span><b>GENVM / PYTHON</b></div>
@@ -358,7 +398,7 @@ result = gl.eq_principle.prompt_comparative(
         <div className="method-grid">
           {[
             ['01', 'Define', 'Translate the deal into explicit, machine-readable success rules.'],
-            ['02', 'Bundle', 'Normalize signed logs, receipts, artifacts and public evidence.'],
+            ['02', 'Bundle', 'Normalize event records, receipts, artifacts and public evidence.'],
             ['03', 'Adjudicate', 'Validators apply one rubric and agree on PASS, FAIL or REVIEW.'],
           ].map(([number, title, copy]) => (
             <article key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>
