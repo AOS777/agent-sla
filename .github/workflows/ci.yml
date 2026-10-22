@@ -15,4 +15,22 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: npm run lint
       - run: npm run build
+      - run: npm audit --omit=dev
+
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/gltest-direct
+          key: gltest-direct-v0.6.0-rc3
+      - run: python -m pip install -r requirements.txt
+      - run: genvm-lint contracts/agent_sla_judge.py
+      - run: pytest tests/direct -q
