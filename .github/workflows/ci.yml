@@ -21,6 +21,11 @@ jobs:
 
   contract:
     runs-on: ubuntu-latest
+    env:
+      # The contract header pins a py-genlayer runner that ships in this GenVM
+      # release. Without the explicit pin, gltest follows the newest RC and can
+      # download a tree that does not contain the declared runner hash.
+      GENVM_VERSION: v0.6.0-rc3
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

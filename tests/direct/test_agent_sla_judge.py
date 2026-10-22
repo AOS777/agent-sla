@@ -3,10 +3,32 @@
 import base64
 import hashlib
 import json
+import sys
 
 import pytest
 from eth_account import Account
 from eth_account.messages import encode_defunct
+
+
+@pytest.fixture(autouse=True)
+def reset_genlayer_contract_registry():
+    """Isolate contract imports across direct-mode tests.
+
+    The GenLayer Python runtime intentionally permits one Contract subclass per
+    loaded module. The direct runner reloads the same contract file for every
+    test but does not clear that runtime registry, so a clean multi-test CI run
+    would otherwise fail after the first deployment.
+    """
+
+    contract_module = sys.modules.get("genlayer.contract")
+    if contract_module is not None:
+        setattr(contract_module, "__known_contract__", None)
+
+    yield
+
+    contract_module = sys.modules.get("genlayer.contract")
+    if contract_module is not None:
+        setattr(contract_module, "__known_contract__", None)
 
 
 TERMS = (
