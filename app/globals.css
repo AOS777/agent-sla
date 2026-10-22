@@ -80,10 +80,15 @@ input[type='url']:focus { border-color: var(--orange); box-shadow: inset 0 0 0 1
 .run-button:hover { background: var(--orange); }.run-button:disabled { cursor: wait; opacity: .7; }.run-button b { font-size: 20px; }
 .download-button { width: 100%; margin-top: 8px; border: 1px solid var(--ink); background: transparent; padding: 11px; cursor: pointer; font: 9px var(--font-geist-mono); letter-spacing: .08em; }
 .download-button:hover { background: rgba(17,19,17,.08); }
+.evidence-actions { margin: 10px 0 16px; }
+.evidence-actions input[type='file'] { position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none; }
+.file-button { display: block !important; width: 100%; margin-top: 8px; border: 1px solid var(--ink); background: transparent; padding: 11px; cursor: pointer; text-align: center; font: 9px var(--font-geist-mono) !important; letter-spacing: .08em; }
+.file-button:hover { background: rgba(17,19,17,.08); }
+.verified-note { min-height: auto !important; margin: 8px 0 0 !important; color: #32620f !important; font: 9px var(--font-geist-mono) !important; }
 .chain-button { width: 100%; margin-top: 8px; border: 1px solid var(--ink); background: var(--orange); color: #fff; padding: 12px; cursor: pointer; font: 9px var(--font-geist-mono); letter-spacing: .08em; }
 .chain-button:hover { background: var(--ink); }.chain-button:disabled { cursor: wait; opacity: .55; }
 .chain-result { margin-top: 12px; padding: 13px; border: 1px solid rgba(17,19,17,.45); background: rgba(255,255,255,.25); }
-.chain-result span { font: 9px var(--font-geist-mono); letter-spacing: .07em; }.chain-result strong { float: right; font: 700 11px var(--font-geist-mono); }.chain-result p { margin: 8px 0 0; font-size: 10px; line-height: 1.45; }
+.chain-result span { font: 9px var(--font-geist-mono); letter-spacing: .07em; }.chain-result strong { float: right; font: 700 11px var(--font-geist-mono); }.chain-result p { margin: 8px 0; font-size: 10px; line-height: 1.45; }.chain-result code { display: block; overflow: hidden; color: var(--muted); text-overflow: ellipsis; font: 8px var(--font-geist-mono); white-space: nowrap; }
 .tx-link { display: block; margin-top: 10px; font: 9px var(--font-geist-mono); text-decoration: underline; text-underline-offset: 3px; }
 .verdict-card small { margin-top: 12px; font-size: 9px; line-height: 1.4; }
 
