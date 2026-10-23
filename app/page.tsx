@@ -86,7 +86,9 @@ const sampleEvidence = JSON.stringify(
   2,
 );
 
-const configuredContractAddress = process.env.NEXT_PUBLIC_AGENT_SLA_CONTRACT_ADDRESS?.trim() ?? '';
+const deployedV2ContractAddress = '0x025A22401c73c27F3DfE45e3CC3295CC2cbae4c0';
+const configuredContractAddress =
+  process.env.NEXT_PUBLIC_AGENT_SLA_CONTRACT_ADDRESS?.trim() || deployedV2ContractAddress;
 const contractAddress = /^0x[0-9a-fA-F]{40}$/.test(configuredContractAddress)
   ? getAddress(configuredContractAddress)
   : null;

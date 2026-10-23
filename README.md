@@ -62,7 +62,7 @@ copy .env.example .env.local
 npm run dev
 ```
 
-Set `NEXT_PUBLIC_AGENT_SLA_CONTRACT_ADDRESS` only after deploying the reviewed V2 contract. With no address configured, the app remains fully usable for local verification and evidence-pack download, but all onchain actions stay disabled. The legacy V1 address is intentionally not used because its method signature and evidence guarantees are incompatible with V2.
+The finalized Studio Dev V2 address is built in as the reviewed default. `NEXT_PUBLIC_AGENT_SLA_CONTRACT_ADDRESS` can override it for another verified deployment. The legacy V1 address is intentionally not used because its method signature and evidence guarantees are incompatible with V2.
 
 The normal workflow is:
 
@@ -113,7 +113,12 @@ get_case(case_id)
 
 The previously published V1 contract and demo transaction remain historical evidence of the earlier prototype, but they do **not** implement V2 guarantees and are no longer wired into the app.
 
-The V2 source and tests are complete. A new Studio Dev deployment, finalized sample transactions, and the portal resubmission remain intentionally pending because each requires an explicit wallet signature. After deployment, add the verified address to `NEXT_PUBLIC_AGENT_SLA_CONTRACT_ADDRESS` and record the finalized transaction links in `docs/REVIEWER_RESPONSE.md`.
+The V2 source and tests are complete. The reviewed contract was deployed successfully on Studio Dev (chain 61997) on October 22, 2026:
+
+- Contract: [`0x025A22401c73c27F3DfE45e3CC3295CC2cbae4c0`](https://explorer-studio-dev.genlayer.com/address/0x025A22401c73c27F3DfE45e3CC3295CC2cbae4c0)
+- Deployment transaction: [`0xde69da1619240181a3f299286c7144708d1d927bd25241d52932fea50ca5d89a`](https://explorer-studio-dev.genlayer.com/tx/0xde69da1619240181a3f299286c7144708d1d927bd25241d52932fea50ca5d89a) (`FINALIZED`, GenVM `SUCCESS`, consensus `Accepted`)
+
+Finalized sample `submit_case` and `adjudicate` transactions and the portal resubmission remain pending because they require additional wallet signatures.
 
 ## Scope
 

@@ -1,6 +1,6 @@
 # AgentSLA V2 reviewer response
 
-This document maps the requested authenticity and blockchain-reliability changes to code and repeatable evidence. It deliberately does not claim a new deployment until the Studio Dev transactions are finalized.
+This document maps the requested authenticity and blockchain-reliability changes to code and repeatable evidence. It records only transactions that are visibly finalized in Studio Dev and its explorer.
 
 ## 1. Event signatures and signer identity
 
@@ -57,7 +57,7 @@ npm run build
 npm audit --omit=dev
 ```
 
-Current local result before deployment:
+Current verified result:
 
 - Web security tests: 11 passed.
 - ESLint and the production web build: passed.
@@ -65,11 +65,19 @@ Current local result before deployment:
 - GenVM linter: passed with no warnings.
 - Production dependency audit: zero known vulnerabilities.
 
-## 7. Deployment evidence still required
+## 7. Deployment evidence
+
+Finalized on Studio Dev (chain 61997) on October 22, 2026:
+
+- V2 contract: [`0x025A22401c73c27F3DfE45e3CC3295CC2cbae4c0`](https://explorer-studio-dev.genlayer.com/address/0x025A22401c73c27F3DfE45e3CC3295CC2cbae4c0)
+- Deployment transaction: [`0xde69da1619240181a3f299286c7144708d1d927bd25241d52932fea50ca5d89a`](https://explorer-studio-dev.genlayer.com/tx/0xde69da1619240181a3f299286c7144708d1d927bd25241d52932fea50ca5d89a)
+- Explorer result: `FINALIZED`, GenVM `SUCCESS`, consensus `Accepted`.
+- The frontend now uses this address as its reviewed default and still permits an explicit environment override.
+
+## 8. Evidence still required before resubmission
 
 Before resubmitting the contribution, append all of the following after they are visibly finalized:
 
-- V2 Studio Dev contract address and deployment transaction.
 - One finalized `submit_case` transaction.
 - One finalized `adjudicate` transaction.
 - `get_case` output showing exact packet hash and per-criterion results.
